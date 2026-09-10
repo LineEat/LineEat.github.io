@@ -2,6 +2,7 @@
 inbox/
 archive/
 capture.log
+organize.log
 site/
 __pycache__/
 *.pyc
