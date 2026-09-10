@@ -1,6 +1,6 @@
 # LineEat — 南軟園區餐車記事本自動整理
 
-網站：https://man-chen-tw.github.io/LineEat/ （GitHub Pages，來源 main 分支 `/docs`）
+網站：https://lineeat.github.io/ （GitHub Pages，repo `LineEat/LineEat.github.io`，來源 main 分支 `/docs`）
 
 ## 一次性設定
 1. 安裝相依套件：
