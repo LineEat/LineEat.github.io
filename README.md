@@ -21,8 +21,13 @@
 用系統管理員 PowerShell 執行 `schedule_task.ps1` 即可註冊工作排程；移除用 `schedule_task.ps1 -Remove`。
 
 ## 整理資料
-截圖累積在 `inbox/` 之後，在 Claude Code 說「整理 inbox」，結果會寫進 `data/trucks.csv` 和 `data/summary.md`，
-處理過的截圖移到 `archive/`。
+每天 19:45 排程會執行 `organize_inbox.ps1`，用 Claude Code 命令列（`claude -p`）照 CLAUDE.md 的步驟自動整理：
+辨識截圖、更新 `data/trucks.csv` 與 `summary.md`、裁 DM 圖到 `docs/img`、build 網站、git push。
+執行結果與費用記在 `organize.log`。需要先安裝並登入 Claude Code CLI：
+```
+npm install -g @anthropic-ai/claude-code
+```
+登入與桌面 app 共用。也可以隨時在 Claude Code 裡手動說「整理 inbox」。
 
 ## 美食網站
 `python build_site.py` 會把 `data/trucks.csv` 做成單頁網站 `docs/index.html`，有搜尋與類別篩選。
