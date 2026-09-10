@@ -1,4 +1,4 @@
-# 註冊 / 移除 Windows 工作排程：每天 10:30、15:30、19:30 執行 capture_notes.py
+﻿# 註冊 / 移除 Windows 工作排程：每天 10:30、15:30、19:30 執行 capture_notes.py
 # （管理員傍晚就會刪掉當天貼文，所以最後一次要在 20:00 前）
 # 用法：  .\schedule_task.ps1          註冊
 #         .\schedule_task.ps1 -Remove  移除
