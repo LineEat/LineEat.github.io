@@ -6,24 +6,30 @@ capture_notes.py — 自動把 LINE 社群「記事本」逐頁截圖存到 inbo
   2. 借用前景權限（AttachThreadInput）把聊天視窗提到前面，點右上角「記事本」圖示，
      立刻把前景還給原本的程式 → LINE 視窗會閃一下約半秒
   3. 記事本視窗（SquarePostListWindow）調成 428x1000（LINE 允許的最大寬度）、壓到 z-order 最底層
-  4. 捲到最頂，往下逐頁 PrintWindow 截圖（被蓋住也能截），直到畫面不再變化
-  5. 關掉記事本視窗、游標放回原位、寫 manifest
+  4. 用樣板比對找出每則貼文的「顯示更多」連結並點開（原地展開全文；每點一次借一下前景）
+  5. 捲到最頂，往下逐頁 PrintWindow 截圖（被蓋住也能截），直到畫面不再變化
+  6. 關掉記事本視窗、游標放回原位、寫 manifest
+需要：pip install pywinauto pillow numpy
 
 用法：python capture_notes.py            → 存到 inbox/<日期>_<時間>_pNN.png
       python capture_notes.py --keep     → 截完不關記事本視窗
 """
 import ctypes, os, sys, time, hashlib, json, datetime
 from ctypes import wintypes
+import numpy as np
 from PIL import Image
-from pywinauto import Desktop
+from pywinauto import Desktop, mouse
 
 COMMUNITY = "餐車市集"          # 聊天視窗標題包含的關鍵字
 ROOT = os.path.dirname(os.path.abspath(__file__))
 INBOX = os.path.join(ROOT, "inbox")
 LOGFILE = os.path.join(ROOT, "capture.log")
 WIN_W, WIN_H = 428, 1000          # 記事本視窗大小（寬度上限 428）
-TICKS_PER_PAGE = 2                # 每頁往下捲幾格滾輪（1 格約 230px；2 格約半頁，讓 480px 內的圖片區塊必有一頁是完整的）
-MAX_PAGES = 60
+TICKS_PER_PAGE = 1                # 每頁往下捲幾格滾輪（實測 1 格約 290px，重疊約 650px，讓九宮格與直式照片必有一頁是完整的）
+MAX_PAGES = 80
+SHOWMORE_TPL = os.path.join(ROOT, "data", "showmore_tpl.png")   # 「顯示更多」連結的樣板（灰階 51x22）
+MAX_EXPAND = 40                   # 一次最多點幾個「顯示更多」
+FOOT = 90                         # 視窗底部避開 + 按鈕的高度
 
 user32 = ctypes.windll.user32; gdi32 = ctypes.windll.gdi32; k32 = ctypes.windll.kernel32
 WM_CLOSE, WM_MOUSEWHEEL = 0x0010, 0x020A
@@ -113,6 +119,57 @@ def activate(hwnd):
     time.sleep(0.4)
     return prev
 
+def find_template(img, tpl, thresh=0.985):
+    """正規化互相關（FFT）找樣板，回傳 [(x, y)]，由上到下，去掉距離 < 10px 的重複。"""
+    I = np.asarray(img.convert("L"), dtype=np.float64); T = np.asarray(tpl, dtype=np.float64)
+    th, tw = T.shape; H, W = I.shape; sh = (H + th, W + tw)
+    T0 = T - T.mean(); Tn = np.sqrt((T0 ** 2).sum()) + 1e-9
+    fI = np.fft.rfft2(I, s=sh); fO = np.fft.rfft2(np.ones((th, tw)), s=sh)
+    corr = np.fft.irfft2(fI * np.fft.rfft2(T0[::-1, ::-1], s=sh), s=sh)[th - 1:H, tw - 1:W]
+    s1 = np.fft.irfft2(fI * fO, s=sh)[th - 1:H, tw - 1:W]
+    s2 = np.fft.irfft2(np.fft.rfft2(I ** 2, s=sh) * fO, s=sh)[th - 1:H, tw - 1:W]
+    var = s2 - s1 ** 2 / (th * tw); var[var < 1e-6] = 1e-6
+    ncc = corr / (np.sqrt(var) * Tn)
+    ys, xs = np.where(ncc > thresh)
+    out = []
+    for x, y in sorted(zip(xs.tolist(), ys.tolist()), key=lambda t: t[1]):
+        if all(abs(x - ox) > 10 or abs(y - oy) > 10 for ox, oy in out): out.append((x, y))
+    return out
+
+def expand_show_more(H):
+    """把列表裡所有「顯示更多」點開（原地展開），從最頂一路捲到底。每點一次借一下前景。"""
+    if not os.path.exists(SHOWMORE_TPL):
+        log("沒有 showmore_tpl.png，略過展開"); return 0
+    tpl = Image.open(SHOWMORE_TPL).convert("L"); tw, th = tpl.size
+    clicks, last_hash, stuck = 0, None, 0
+    for _ in range(MAX_PAGES):
+        img = printwindow(H)
+        hits = [(x, y) for x, y in find_template(img, tpl) if y + th < img.height - FOOT]
+        if hits and clicks < MAX_EXPAND:
+            x, y = hits[0]
+            r = wintypes.RECT(); user32.GetWindowRect(H, ctypes.byref(r))
+            sx, sy = r.left + x + tw // 2, r.top + y + th // 2
+            cur = wintypes.POINT(); user32.GetCursorPos(ctypes.byref(cur))
+            prev = activate(H)
+            try:
+                if owner_of_point(sx, sy) == H:
+                    mouse.click(coords=(sx, sy)); clicks += 1
+                else:
+                    log("「顯示更多」被蓋住，略過一個")
+            finally:
+                user32.SetCursorPos(cur.x, cur.y)
+                if prev and prev != H: activate(prev)
+                user32.SetWindowPos(H, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE)
+            time.sleep(0.8)
+            continue                      # 同一頁重新找（展開後下面的位置都變了）
+        h = img_hash(img)
+        stuck = stuck + 1 if h == last_hash else 0
+        if stuck >= 2: break              # 捲不動了 = 到底
+        last_hash = h
+        wheel(H, -TICKS_PER_PAGE); time.sleep(1.2)
+    log(f"展開了 {clicks} 個「顯示更多」")
+    return clicks
+
 def open_notes(chat):
     """點聊天視窗右上角的記事本圖示，回傳記事本視窗 wrapper。"""
     cr = chat.rectangle()
@@ -152,7 +209,7 @@ def main():
     notes = find_window("SquarePostListWindow")
     if notes:                               # 舊視窗先關掉，重開才會拿到最新貼文
         user32.PostMessageW(notes.handle, WM_CLOSE, 0, 0); time.sleep(1.5)
-    notes = open_notes(chat)
+    notes = open_notes(chat) or (time.sleep(2), open_notes(chat))[1]   # 偶爾第一下點在舊視窗關閉中，再試一次
     if not notes:
         return 4
     H = notes.handle
@@ -161,6 +218,9 @@ def main():
     time.sleep(3.0)                          # 等圖片載入
 
     for _ in range(8): wheel(H, 10); time.sleep(0.25)   # 捲到最頂
+    time.sleep(1.0)
+    expand_show_more(H)                      # 先把所有「顯示更多」點開，截圖才有全文
+    for _ in range(12): wheel(H, 10); time.sleep(0.2)   # 再捲回最頂
     time.sleep(1.5)
 
     stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")

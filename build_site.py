@@ -79,6 +79,14 @@ h1 span{color:var(--accent)}
 .price{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 8px;white-space:nowrap}
 .price em{font-style:normal;color:var(--accent);font-weight:500}
 .notes{grid-column:2;font-size:13px;color:var(--ink-2);margin-top:6px}
+.full{grid-column:2;margin-top:8px;font-size:14px}
+.full summary{cursor:pointer;color:var(--focus);font-size:13px;list-style:none;display:inline-flex;align-items:center;gap:4px;user-select:none}
+.full summary::-webkit-details-marker{display:none}
+.full summary::before{content:"";width:0;height:0;border:5px solid transparent;border-left-color:var(--focus);border-right:0;transition:transform .15s}
+.full[open] summary::before{transform:rotate(90deg)}
+.full summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+.full .txt{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);border-left:3px solid var(--line);padding:10px 14px;margin-top:8px;border-radius:0 8px 8px 0;line-height:1.7;max-width:62ch}
+.full .txt a{color:var(--focus);word-break:break-all}
 .pics{grid-column:2;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .pics button{border:1px solid var(--line);background:var(--bg);padding:0;border-radius:8px;overflow:hidden;cursor:zoom-in;height:96px}
 .pics img{display:block;height:100%;width:auto;max-width:200px;object-fit:cover}
@@ -90,7 +98,7 @@ dialog.lb .cap{color:#fff;font-size:13px;text-align:center;margin-top:8px;font-f
 mark{background:var(--hit);color:inherit;border-radius:2px;padding:0 1px}
 .empty{padding:40px 0;text-align:center;color:var(--ink-3)}
 footer{margin-top:40px;font-size:12px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:12px;line-height:1.7}
-@media (max-width:560px){.row{grid-template-columns:1fr}.items,.prices,.notes,.pics{grid-column:1}.time{padding-top:0}}
+@media (max-width:560px){.row{grid-template-columns:1fr}.items,.prices,.notes,.pics,.full{grid-column:1}.time{padding-top:0}}
 @media (prefers-reduced-motion:no-preference){.row{transition:border-color .15s}.row:hover{border-color:var(--ink-3)}}
 </style>
 </head>
@@ -130,6 +138,7 @@ const todayStr = new Date().toLocaleDateString("sv-SE");
 const tomorrowStr = new Date(Date.now() + 864e5).toLocaleDateString("sv-SE");
 document.getElementById("meta").textContent = `${DATA.length} 筆 · 今天 ${todayStr.slice(5).replace("-", "/")}（${WD[new Date().getDay()]}）`;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function linkify(html) { return html.replace(/(https?:\/\/[^\s<]+)/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`); }
 function hl(s, terms) { let h = esc(s); for (const t of terms) { if (!t) continue; h = h.replace(new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), m => `<mark>${m}</mark>`); } return h; }
 function dayLabel(d) {
   const dt = new Date(d + "T00:00:00");
@@ -142,7 +151,7 @@ function dayLabel(d) {
 function render() {
   const terms = q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   clearBtn.hidden = !q.value;
-  const hit = DATA.filter(r => (!cat || r.category === cat) && terms.every(t => [r.truck, r.items, r.prices, r.location, r.notes, r.category, r.time, r.date].join(" ").toLowerCase().includes(t)));
+  const hit = DATA.filter(r => (!cat || r.category === cat) && terms.every(t => [r.truck, r.items, r.prices, r.location, r.notes, r.category, r.time, r.date, r.fulltext].join(" ").toLowerCase().includes(t)));
   count.textContent = hit.length === DATA.length ? `全部 ${hit.length} 筆` : `找到 ${hit.length} 筆`;
   if (!hit.length) { out.innerHTML = '<div class="empty">沒有符合的餐車。試試餐車名的一部分，或清掉類別篩選。</div>'; return; }
   const byDay = new Map(); for (const r of hit) (byDay.get(r.date) || byDay.set(r.date, []).get(r.date)).push(r);
@@ -151,6 +160,8 @@ function render() {
     const [lbl, tag] = dayLabel(d);
     const rows = byDay.get(d).map(r => {
       const prices = (r.prices || "").split("；").filter(Boolean).map(p => `<span class="price">${hl(p, terms).replace(/(\d+(?:\/\d+)*)(?=[^\d]*$)/, "<em>$1</em>")}</span>`).join("");
+      const hitInFull = terms.length && r.fulltext && terms.some(t => r.fulltext.toLowerCase().includes(t) && ![r.truck, r.items, r.prices, r.location, r.notes].join(" ").toLowerCase().includes(t));
+      const full = r.fulltext ? `<details class="full"${hitInFull ? " open" : ""}><summary>詳細說明</summary><div class="txt">${linkify(hl(r.fulltext, terms))}</div></details>` : "";
       const imgs = (r.images || "").split("；").map(s => s.trim()).filter(Boolean);
       const pics = imgs.length ? `<div class="pics">${imgs.map(src => `<button type="button" data-src="${esc(src)}" data-cap="${esc(r.truck)} ${esc(r.date)}" aria-label="放大 ${esc(r.truck)} 的圖片"><img src="${esc(src)}" alt="${esc(r.truck)} 的 DM" loading="lazy"></button>`).join("")}</div>` : "";
       return `<div class="row">
@@ -159,6 +170,7 @@ function render() {
         ${r.items ? `<div class="items">${hl(r.items, terms)}</div>` : ""}
         ${prices ? `<div class="prices">${prices}</div>` : ""}
         ${r.notes ? `<div class="notes">${hl(r.notes, terms)}</div>` : ""}
+        ${full}
         ${pics}
       </div>`;
     }).join("");
