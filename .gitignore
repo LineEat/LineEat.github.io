@@ -1,0 +1,7 @@
+# 截圖含社群成員名稱與頭像，不進版控
+inbox/
+archive/
+capture.log
+site/
+__pycache__/
+*.pyc

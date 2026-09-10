@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>南軟餐車市集</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F2F3F0; --surface:#FFFFFF; --line:#D9DBD4; --ink:#1B1D1A; --ink-2:#5A5E57; --ink-3:#8B8F87;
+  --accent:#C0301C; --accent-ink:#FFFFFF; --accent-soft:#F8E4E0;
+  --today:#2F6F42; --today-soft:#DDEEDF; --tomorrow:#8A5A0A; --tomorrow-soft:#F5E9CF;
+  --hit:#FFF2A8; --focus:#2456B8;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#151715; --surface:#1E211E; --line:#33372F; --ink:#EDEEE8; --ink-2:#B3B7AD; --ink-3:#7E8279;
+  --accent:#E8503A; --accent-ink:#151715; --accent-soft:#3A221E;
+  --today:#7FC58F; --today-soft:#1F3324; --tomorrow:#E2B25C; --tomorrow-soft:#3A2E16;
+  --hit:#5A4C10; --focus:#7FA5F0;
+}}
+:root[data-theme="dark"]{
+  --bg:#151715; --surface:#1E211E; --line:#33372F; --ink:#EDEEE8; --ink-2:#B3B7AD; --ink-3:#7E8279;
+  --accent:#E8503A; --accent-ink:#151715; --accent-soft:#3A221E;
+  --today:#7FC58F; --today-soft:#1F3324; --tomorrow:#E2B25C; --tomorrow-soft:#3A2E16;
+  --hit:#5A4C10; --focus:#7FA5F0;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;font-size:15px;line-height:1.55}
+.wrap{max-width:960px;margin:0 auto;padding:20px 20px 64px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:16px}
+h1{font-family:"LXGW WenKai TC","Noto Sans TC",serif;font-weight:700;font-size:30px;margin:0;letter-spacing:.02em;text-wrap:balance}
+h1 span{color:var(--accent)}
+.meta{color:var(--ink-3);font-size:13px;font-family:"IBM Plex Mono",monospace}
+.toolbar{position:sticky;top:0;z-index:2;background:var(--bg);padding:10px 0 12px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+.search{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0 12px}
+.search svg{flex:none;width:18px;height:18px;stroke:var(--ink-3);fill:none;stroke-width:2}
+.search input{flex:1;border:0;background:transparent;color:var(--ink);font:inherit;font-size:17px;padding:12px 0;outline:none;min-width:0}
+.search input::placeholder{color:var(--ink-3)}
+.search button{border:0;background:transparent;color:var(--ink-3);font:inherit;cursor:pointer;padding:6px}
+.search:focus-within{border-color:var(--focus);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus) 25%,transparent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chips .lbl{font-size:12px;color:var(--ink-3);letter-spacing:.08em;text-transform:uppercase;margin-right:4px;font-family:"IBM Plex Mono",monospace}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:999px;padding:4px 12px;font:inherit;font-size:13px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip:focus-visible,.search button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.count{font-size:13px;color:var(--ink-3);margin:14px 0 6px;font-family:"IBM Plex Mono",monospace}
+.day{margin:18px 0 8px;display:flex;align-items:center;gap:10px}
+.day h2{font-family:"LXGW WenKai TC","Noto Sans TC",serif;font-size:22px;font-weight:700;margin:0}
+.day .tag{font-size:12px;padding:2px 9px;border-radius:999px;font-weight:500}
+.tag.today{background:var(--today-soft);color:var(--today)}
+.tag.tomorrow{background:var(--tomorrow-soft);color:var(--tomorrow)}
+.tag.past{background:var(--line);color:var(--ink-2)}
+.list{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:118px 1fr;gap:4px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.time{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:14px;color:var(--ink-2);padding-top:5px;white-space:nowrap}
+.time.na{color:var(--ink-3)}
+.name{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px}
+.name b{font-family:"LXGW WenKai TC","Noto Sans TC",serif;font-size:21px;font-weight:700;letter-spacing:.01em}
+.cat{font-size:12px;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:1px 7px}
+.loc{font-size:13px;color:var(--ink-3)}
+.items{grid-column:2;margin:4px 0 0;color:var(--ink)}
+.prices{grid-column:2;display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:6px}
+.price{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 8px;white-space:nowrap}
+.price em{font-style:normal;color:var(--accent);font-weight:500}
+.notes{grid-column:2;font-size:13px;color:var(--ink-2);margin-top:6px}
+mark{background:var(--hit);color:inherit;border-radius:2px;padding:0 1px}
+.empty{padding:40px 0;text-align:center;color:var(--ink-3)}
+footer{margin-top:40px;font-size:12px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:12px;line-height:1.7}
+@media (max-width:560px){.row{grid-template-columns:1fr}.items,.prices,.notes{grid-column:1}.time{padding-top:0}}
+@media (prefers-reduced-motion:no-preference){.row{transition:border-color .15s}.row:hover{border-color:var(--ink-3)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>南軟<span>餐車</span>市集</h1>
+  <div class="meta" id="meta"></div>
+</header>
+<div class="toolbar">
+  <div class="search">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="搜餐車、品項、價格、地點…（例如：香腸、提拉米蘇、80）" autocomplete="off" aria-label="搜尋">
+    <button id="clear" type="button" aria-label="清除" hidden>✕</button>
+  </div>
+  <div class="chips" id="cats"><span class="lbl">類別</span></div>
+</div>
+<div class="count" id="count"></div>
+<div id="out"></div>
+<footer>資料來源：LINE 社群「南軟二期餐車市集」記事本截圖，由 Claude 辨識整理。餐車貼文以文字為主，DM 縮圖上判讀的價格可能有誤，以現場為準。<br>頁面產生時間 2026-09-10 20:39。</footer>
+</div>
+<script>
+const DATA = [{"date": "2026-09-10", "truck": "極餓排骨酥&雞腿酥", "category": "小吃", "items": "排骨酥；雞腿酥；黑白雙殺（白木耳露＆黑木耳露）", "prices": "排骨酥 小份100/中份150/大份200；木耳露 一瓶80/兩瓶150", "location": "南軟餐車駐點", "time": "16:00-20:00", "source_image": "archive/2026-09/2026-09-10_1952_p02.png", "notes": "歐翼車；只收現金；預訂取餐 16:30 起、最晚 19:00；貼文 9/9 20:10；DM 小字價格不確定"}, {"date": "2026-09-10", "truck": "粉桃君_鐵板沙威瑪/蔥抓餅", "category": "小吃", "items": "鐵板沙威瑪（日式洋蔥雞肉、台式黑胡椒豬肉）；超值組合（+蛋+起士）；蔥抓餅（原味、招牌香酥蛋餅）", "prices": "日式洋蔥雞肉 80；台式黑胡椒豬肉 80；超值組合 100；蔥抓餅原味 40；招牌香酥蛋餅 50", "location": "南軟二期市集", "time": "16:30-19:30", "source_image": "archive/2026-09/2026-09-10_1952_p01.png", "notes": "首次來南港；貼文 9/9 20:11；貼文文字被「顯示更多」截斷"}, {"date": "2026-09-11", "truck": "尻一支香腸", "category": "小吃", "items": "黑豬肉香腸；生香腸（7條裝）", "prices": "香腸 1支50/2支90/3支130；生香腸 7條230", "location": "南軟二期市集", "time": "11:00-14:00", "source_image": "archive/2026-09/2026-09-10_2020_p00.png", "notes": "國產豬；貼文 9/10 約19:25；貼文文字被「顯示更多」截斷"}, {"date": "2026-09-11", "truck": "MB 提拉米蘇", "category": "甜點", "items": "手作多口味提拉米蘇（經典原味、OREO、抹茶等）；肚臍橙提拉米蘇（新品）；鮮奶酪", "prices": "提拉米蘇 130；肚臍橙提拉米蘇 160；鮮奶酪 40", "location": "南軟二期市集", "time": "16:00-20:00（或售完）", "source_image": "archive/2026-09/2026-09-10_2020_p00.png", "notes": "落地攤；預訂：留言 品項+數量+姓名；貼文 9/10 約19:35；口味名稱與價格從 DM 縮圖判讀，不確定"}, {"date": "2026-09-11", "truck": "大仁哥烤雞", "category": "小吃", "items": "烤雞（巡迴）", "prices": "", "location": "臺北市南港區三重里園區街3-2號H棟（南港軟體園區郵局）", "time": "", "source_image": "archive/2026-09/2026-09-10_2020_p01.png", "notes": "預訂：FB 貼文連結；營業時段未寫；貼文 9/8 12:00"}];
+const WD = ["日","一","二","三","四","五","六"];
+const q = document.getElementById("q"), clearBtn = document.getElementById("clear"), out = document.getElementById("out"), count = document.getElementById("count");
+const cats = [...new Set(DATA.map(r => r.category).filter(Boolean))];
+let cat = "";
+const catBox = document.getElementById("cats");
+for (const c of ["", ...cats]) {
+  const b = document.createElement("button"); b.className = "chip"; b.type = "button"; b.textContent = c || "全部";
+  b.setAttribute("aria-pressed", String(c === cat));
+  b.onclick = () => { cat = c; [...catBox.querySelectorAll(".chip")].forEach(x => x.setAttribute("aria-pressed", String(x.textContent === (cat || "全部")))); render(); };
+  catBox.appendChild(b);
+}
+const todayStr = new Date().toLocaleDateString("sv-SE");
+const tomorrowStr = new Date(Date.now() + 864e5).toLocaleDateString("sv-SE");
+document.getElementById("meta").textContent = `${DATA.length} 筆 · 今天 ${todayStr.slice(5).replace("-", "/")}（${WD[new Date().getDay()]}）`;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function hl(s, terms) { let h = esc(s); for (const t of terms) { if (!t) continue; h = h.replace(new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), m => `<mark>${m}</mark>`); } return h; }
+function dayLabel(d) {
+  const dt = new Date(d + "T00:00:00");
+  const base = `${dt.getMonth() + 1}/${dt.getDate()}（${WD[dt.getDay()]}）`;
+  if (d === todayStr) return [base, '<span class="tag today">今天</span>'];
+  if (d === tomorrowStr) return [base, '<span class="tag tomorrow">明天</span>'];
+  if (d < todayStr) return [base, '<span class="tag past">已過</span>'];
+  return [base, ""];
+}
+function render() {
+  const terms = q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  clearBtn.hidden = !q.value;
+  const hit = DATA.filter(r => (!cat || r.category === cat) && terms.every(t => [r.truck, r.items, r.prices, r.location, r.notes, r.category, r.time, r.date].join(" ").toLowerCase().includes(t)));
+  count.textContent = hit.length === DATA.length ? `全部 ${hit.length} 筆` : `找到 ${hit.length} 筆`;
+  if (!hit.length) { out.innerHTML = '<div class="empty">沒有符合的餐車。試試餐車名的一部分，或清掉類別篩選。</div>'; return; }
+  const byDay = new Map(); for (const r of hit) (byDay.get(r.date) || byDay.set(r.date, []).get(r.date)).push(r);
+  const days = [...byDay.keys()].sort((a, b) => (a >= todayStr) === (b >= todayStr) ? (a >= todayStr ? a.localeCompare(b) : b.localeCompare(a)) : (a >= todayStr ? -1 : 1));
+  out.innerHTML = days.map(d => {
+    const [lbl, tag] = dayLabel(d);
+    const rows = byDay.get(d).map(r => {
+      const prices = (r.prices || "").split("；").filter(Boolean).map(p => `<span class="price">${hl(p, terms).replace(/(\d+(?:\/\d+)*)(?=[^\d]*$)/, "<em>$1</em>")}</span>`).join("");
+      return `<div class="row">
+        <div class="time ${r.time ? "" : "na"}">${esc(r.time || "時段未寫")}</div>
+        <div class="name"><b>${hl(r.truck, terms)}</b>${r.category ? `<span class="cat">${esc(r.category)}</span>` : ""}${r.location ? `<span class="loc">${hl(r.location, terms)}</span>` : ""}</div>
+        ${r.items ? `<div class="items">${hl(r.items, terms)}</div>` : ""}
+        ${prices ? `<div class="prices">${prices}</div>` : ""}
+        ${r.notes ? `<div class="notes">${hl(r.notes, terms)}</div>` : ""}
+      </div>`;
+    }).join("");
+    return `<div class="day"><h2>${lbl}</h2>${tag}</div><div class="list">${rows}</div>`;
+  }).join("");
+}
+q.addEventListener("input", render);
+clearBtn.onclick = () => { q.value = ""; render(); q.focus(); };
+try { const saved = localStorage.getItem("q"); if (saved) q.value = saved; } catch (e) {}
+q.addEventListener("input", () => { try { localStorage.setItem("q", q.value); } catch (e) {} });
+render();
+</script>
+</body>
+</html>
