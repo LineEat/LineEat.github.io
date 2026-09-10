@@ -102,6 +102,17 @@ def wheel(hwnd, ticks):
     x, y = (r.left + r.right) // 2, (r.top + r.bottom) // 2
     user32.PostMessageW(hwnd, WM_MOUSEWHEEL, (120 * ticks) << 16, (y << 16) | (x & 0xffff))
 
+def scroll_to_top(hwnd, max_iter=60):
+    """一直往上捲，直到畫面連續兩次不再變化（單次大 delta 會被 Qt 截短，不能只送一次）。"""
+    last, same = None, 0
+    for _ in range(max_iter):
+        wheel(hwnd, 5); time.sleep(0.35)
+        h = img_hash(printwindow(hwnd))
+        same = same + 1 if h == last else 0
+        if same >= 2: return True
+        last = h
+    log("捲回頂端可能沒完成"); return False
+
 def owner_of_point(x, y):
     h = user32.WindowFromPoint(wintypes.POINT(x, y))
     return user32.GetAncestor(h, 2) if h else 0   # GA_ROOT
@@ -217,10 +228,10 @@ def main():
     user32.SetWindowPos(H, HWND_BOTTOM, sw - WIN_W - 20, 40, WIN_W, WIN_H, SWP_NOACTIVATE)   # 螢幕內、最底層
     time.sleep(3.0)                          # 等圖片載入
 
-    for _ in range(8): wheel(H, 10); time.sleep(0.25)   # 捲到最頂
-    time.sleep(1.0)
+    scroll_to_top(H)
+    time.sleep(0.5)
     expand_show_more(H)                      # 先把所有「顯示更多」點開，截圖才有全文
-    for _ in range(12): wheel(H, 10); time.sleep(0.2)   # 再捲回最頂
+    scroll_to_top(H)                         # 再捲回最頂
     time.sleep(1.5)
 
     stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
