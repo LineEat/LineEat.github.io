@@ -110,7 +110,7 @@ footer{margin-top:40px;font-size:12px;color:var(--ink-3);border-top:1px solid va
 </div>
 <div class="count" id="count"></div>
 <div id="out"></div>
-<footer>資料來源：LINE 社群「南軟二期餐車市集」記事本截圖，由 Claude 辨識整理。餐車貼文以文字為主，DM 縮圖上判讀的價格可能有誤，以現場為準。圖片為各餐車張貼的宣傳圖縮圖。<br>頁面產生時間 __BUILT__。</footer>
+<footer>資料來源：LINE 社群「南軟二期餐車市集」記事本。餐車貼文以文字為主，DM 縮圖上判讀的價格可能有誤，以現場為準。圖片為各餐車張貼的宣傳圖縮圖。<br>頁面產生時間 __BUILT__。</footer>
 </div>
 <dialog class="lb" id="lb"><img id="lbimg" alt=""><div class="cap" id="lbcap"></div></dialog>
 <script>
