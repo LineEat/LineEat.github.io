@@ -22,7 +22,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 INBOX = os.path.join(ROOT, "inbox")
 LOGFILE = os.path.join(ROOT, "capture.log")
 WIN_W, WIN_H = 428, 1000          # 記事本視窗大小（寬度上限 428）
-TICKS_PER_PAGE = 4                # 每頁往下捲幾格滾輪（4 格約 2/3 頁，保留重疊）
+TICKS_PER_PAGE = 2                # 每頁往下捲幾格滾輪（1 格約 230px；2 格約半頁，讓 480px 內的圖片區塊必有一頁是完整的）
 MAX_PAGES = 60
 
 user32 = ctypes.windll.user32; gdi32 = ctypes.windll.gdi32; k32 = ctypes.windll.kernel32

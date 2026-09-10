@@ -79,10 +79,18 @@ h1 span{color:var(--accent)}
 .price{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 8px;white-space:nowrap}
 .price em{font-style:normal;color:var(--accent);font-weight:500}
 .notes{grid-column:2;font-size:13px;color:var(--ink-2);margin-top:6px}
+.pics{grid-column:2;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pics button{border:1px solid var(--line);background:var(--bg);padding:0;border-radius:8px;overflow:hidden;cursor:zoom-in;height:96px}
+.pics img{display:block;height:100%;width:auto;max-width:200px;object-fit:cover}
+.pics button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+dialog.lb{border:0;background:transparent;padding:0;max-width:min(96vw,900px);max-height:96vh}
+dialog.lb::backdrop{background:rgba(0,0,0,.72)}
+dialog.lb img{display:block;max-width:min(96vw,900px);max-height:88vh;width:auto;height:auto;border-radius:10px;background:var(--surface)}
+dialog.lb .cap{color:#fff;font-size:13px;text-align:center;margin-top:8px;font-family:"Noto Sans TC",sans-serif}
 mark{background:var(--hit);color:inherit;border-radius:2px;padding:0 1px}
 .empty{padding:40px 0;text-align:center;color:var(--ink-3)}
 footer{margin-top:40px;font-size:12px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:12px;line-height:1.7}
-@media (max-width:560px){.row{grid-template-columns:1fr}.items,.prices,.notes{grid-column:1}.time{padding-top:0}}
+@media (max-width:560px){.row{grid-template-columns:1fr}.items,.prices,.notes,.pics{grid-column:1}.time{padding-top:0}}
 @media (prefers-reduced-motion:no-preference){.row{transition:border-color .15s}.row:hover{border-color:var(--ink-3)}}
 </style>
 </head>
@@ -102,8 +110,9 @@ footer{margin-top:40px;font-size:12px;color:var(--ink-3);border-top:1px solid va
 </div>
 <div class="count" id="count"></div>
 <div id="out"></div>
-<footer>資料來源：LINE 社群「南軟二期餐車市集」記事本截圖，由 Claude 辨識整理。餐車貼文以文字為主，DM 縮圖上判讀的價格可能有誤，以現場為準。<br>頁面產生時間 __BUILT__。</footer>
+<footer>資料來源：LINE 社群「南軟二期餐車市集」記事本截圖，由 Claude 辨識整理。餐車貼文以文字為主，DM 縮圖上判讀的價格可能有誤，以現場為準。圖片為各餐車張貼的宣傳圖縮圖。<br>頁面產生時間 __BUILT__。</footer>
 </div>
+<dialog class="lb" id="lb"><img id="lbimg" alt=""><div class="cap" id="lbcap"></div></dialog>
 <script>
 const DATA = __DATA__;
 const WD = ["日","一","二","三","四","五","六"];
@@ -142,17 +151,26 @@ function render() {
     const [lbl, tag] = dayLabel(d);
     const rows = byDay.get(d).map(r => {
       const prices = (r.prices || "").split("；").filter(Boolean).map(p => `<span class="price">${hl(p, terms).replace(/(\d+(?:\/\d+)*)(?=[^\d]*$)/, "<em>$1</em>")}</span>`).join("");
+      const imgs = (r.images || "").split("；").map(s => s.trim()).filter(Boolean);
+      const pics = imgs.length ? `<div class="pics">${imgs.map(src => `<button type="button" data-src="${esc(src)}" data-cap="${esc(r.truck)} ${esc(r.date)}" aria-label="放大 ${esc(r.truck)} 的圖片"><img src="${esc(src)}" alt="${esc(r.truck)} 的 DM" loading="lazy"></button>`).join("")}</div>` : "";
       return `<div class="row">
         <div class="time ${r.time ? "" : "na"}">${esc(r.time || "時段未寫")}</div>
         <div class="name"><b>${hl(r.truck, terms)}</b>${r.category ? `<span class="cat">${esc(r.category)}</span>` : ""}${r.location ? `<span class="loc">${hl(r.location, terms)}</span>` : ""}</div>
         ${r.items ? `<div class="items">${hl(r.items, terms)}</div>` : ""}
         ${prices ? `<div class="prices">${prices}</div>` : ""}
         ${r.notes ? `<div class="notes">${hl(r.notes, terms)}</div>` : ""}
+        ${pics}
       </div>`;
     }).join("");
     return `<div class="day"><h2>${lbl}</h2>${tag}</div><div class="list">${rows}</div>`;
   }).join("");
 }
+const lb = document.getElementById("lb"), lbimg = document.getElementById("lbimg"), lbcap = document.getElementById("lbcap");
+out.addEventListener("click", e => {
+  const b = e.target.closest(".pics button"); if (!b) return;
+  lbimg.src = b.dataset.src; lbimg.alt = b.dataset.cap; lbcap.textContent = b.dataset.cap; lb.showModal();
+});
+lb.addEventListener("click", () => lb.close());
 q.addEventListener("input", render);
 clearBtn.onclick = () => { q.value = ""; render(); q.focus(); };
 try { const saved = localStorage.getItem("q"); if (saved) q.value = saved; } catch (e) {}
