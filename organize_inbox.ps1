@@ -17,7 +17,7 @@ $cli = Join-Path $env:APPDATA "npm\node_modules\@anthropic-ai\claude-code\bin\cl
 if (-not (Test-Path $cli)) { Add-Content $log "$stamp 找不到 Claude Code CLI：$cli（請 npm install -g @anthropic-ai/claude-code）"; exit 1 }
 
 $prompt = "整理 inbox。這是無人值守執行，不要提問，照 CLAUDE.md 的步驟做完，最後把第 7 步的回報寫成幾行文字。"
-$allowed = "Read,Edit,Write,Glob,Grep,Bash(python:*),Bash(git:*),Bash(mv:*),Bash(cp:*),Bash(mkdir:*),Bash(ls:*),Bash(cat:*),Bash(rm:*)"
+$allowed = "Read,Edit,Write,Glob,Grep,Bash(python:*),Bash(git:*),Bash(mv:*),Bash(cp:*),Bash(mkdir:*),Bash(rmdir:*),Bash(ls:*),Bash(cat:*),Bash(rm:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
 
 Add-Content $log "$stamp 開始整理（$($manifests.Count) 次抓取）"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

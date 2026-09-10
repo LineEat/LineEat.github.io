@@ -3,6 +3,7 @@ inbox/
 archive/
 capture.log
 organize.log
+tmp_crops/
 site/
 __pycache__/
 *.pyc
