@@ -52,8 +52,9 @@ h1 span{color:var(--accent)}
 .tag.past{background:var(--line);color:var(--ink-2)}
 .list{display:grid;gap:8px}
 .row{display:grid;grid-template-columns:118px 1fr;gap:4px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
-.time{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:14px;color:var(--ink-2);padding-top:5px;white-space:nowrap}
+.time{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:14px;color:var(--ink-2);padding-top:5px;overflow-wrap:anywhere}
 .time.na{color:var(--ink-3)}
+.time small{display:block;font-family:"Noto Sans TC",sans-serif;font-size:12px;color:var(--ink-3);margin-top:2px}
 .name{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px}
 .name b{font-family:"LXGW WenKai TC","Noto Sans TC",serif;font-size:21px;font-weight:700;letter-spacing:.01em}
 .cat{font-size:12px;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:1px 7px}
@@ -102,7 +103,7 @@ footer{margin-top:40px;font-size:12px;color:var(--ink-3);border-top:1px solid va
 </div>
 <div class="count" id="count"></div>
 <div id="out"></div>
-<footer>資料來源：LINE 社群「南軟二期餐車市集」記事本。餐車貼文以文字為主，DM 縮圖上判讀的價格可能有誤，以現場為準。圖片為各餐車張貼的宣傳圖縮圖。<br>頁面產生時間 2026-09-10 21:33。</footer>
+<footer>資料來源：LINE 社群「南軟二期餐車市集」記事本。餐車貼文以文字為主，DM 縮圖上判讀的價格可能有誤，以現場為準。圖片為各餐車張貼的宣傳圖縮圖。<br>頁面產生時間 2026-09-10 21:41。</footer>
 </div>
 <dialog class="lb" id="lb"><img id="lbimg" alt=""><div class="cap" id="lbcap"></div></dialog>
 <script>
@@ -122,6 +123,11 @@ const todayStr = new Date().toLocaleDateString("sv-SE");
 const tomorrowStr = new Date(Date.now() + 864e5).toLocaleDateString("sv-SE");
 document.getElementById("meta").textContent = `${DATA.length} 筆 · 今天 ${todayStr.slice(5).replace("-", "/")}（${WD[new Date().getDay()]}）`;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function timeHtml(t) {
+  if (!t) return "時段未寫";
+  const m = t.match(/^([^（(]*)([（(].*)?$/);          // 「16:00-20:00（或完售）」→ 主時段 + 小字附註
+  return esc(m[1].trim()) + (m[2] ? `<small>${esc(m[2].trim())}</small>` : "");
+}
 function linkify(html) { return html.replace(/(https?:\/\/[^\s<]+)/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`); }
 function hl(s, terms) { let h = esc(s); for (const t of terms) { if (!t) continue; h = h.replace(new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), m => `<mark>${m}</mark>`); } return h; }
 function dayLabel(d) {
@@ -149,7 +155,7 @@ function render() {
       const imgs = (r.images || "").split("；").map(s => s.trim()).filter(Boolean);
       const pics = imgs.length ? `<div class="pics">${imgs.map(src => `<button type="button" data-src="${esc(src)}" data-cap="${esc(r.truck)} ${esc(r.date)}" aria-label="放大 ${esc(r.truck)} 的圖片"><img src="${esc(src)}" alt="${esc(r.truck)} 的 DM" loading="lazy"></button>`).join("")}</div>` : "";
       return `<div class="row">
-        <div class="time ${r.time ? "" : "na"}">${esc(r.time || "時段未寫")}</div>
+        <div class="time ${r.time ? "" : "na"}">${timeHtml(r.time)}</div>
         <div class="name"><b>${hl(r.truck, terms)}</b>${r.category ? `<span class="cat">${esc(r.category)}</span>` : ""}${r.location ? `<span class="loc">${hl(r.location, terms)}</span>` : ""}</div>
         ${r.items ? `<div class="items">${hl(r.items, terms)}</div>` : ""}
         ${prices ? `<div class="prices">${prices}</div>` : ""}
