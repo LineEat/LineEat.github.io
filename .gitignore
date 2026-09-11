@@ -4,6 +4,7 @@ archive/
 capture.log
 organize.log
 tmp_crops/
+data/backups/
 site/
 __pycache__/
 *.pyc
