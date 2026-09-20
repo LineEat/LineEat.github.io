@@ -7,6 +7,9 @@ import csv, json, os, datetime
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CSV = os.path.join(ROOT, "data", "trucks.csv")
 OUT = os.path.join(ROOT, "docs", "index.html")
+# Cloudflare Web Analytics 的 site token（後台 Analytics & Logs → Web Analytics → 該站 → JS snippet 裡的 token）。
+# 留空就不放統計腳本。
+CF_BEACON_TOKEN = ""
 
 with open(CSV, encoding="utf-8") as f:
     rows = [r for r in csv.DictReader(f) if r.get("truck")]
@@ -195,11 +198,14 @@ try { const saved = localStorage.getItem("q"); if (saved) q.value = saved; } cat
 q.addEventListener("input", () => { try { localStorage.setItem("q", q.value); } catch (e) {} });
 render();
 </script>
+__ANALYTICS__
 </body>
 </html>
 """
 
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
+analytics = (f'<script defer src="https://static.cloudflareinsights.com/beacon.min.js" '
+             f'data-cf-beacon=\'{{"token": "{CF_BEACON_TOKEN}"}}\'></script>') if CF_BEACON_TOKEN else ""
 with open(OUT, "w", encoding="utf-8") as f:
-    f.write(HTML.replace("__DATA__", data_json).replace("__BUILT__", built))
+    f.write(HTML.replace("__DATA__", data_json).replace("__BUILT__", built).replace("__ANALYTICS__", analytics))
 print(f"寫出 {OUT}（{len(rows)} 筆）")
