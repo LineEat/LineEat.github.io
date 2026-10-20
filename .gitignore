@@ -5,6 +5,7 @@ capture.log
 organize.log
 tmp_crops/
 data/backups/
+data/.oauth_token
 site/
 __pycache__/
 *.pyc

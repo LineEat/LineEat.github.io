@@ -27,7 +27,9 @@
 ```
 npm install -g @anthropic-ai/claude-code
 ```
-登入與桌面 app 共用。也可以隨時在 Claude Code 裡手動說「整理 inbox」。
+瀏覽器登入（`claude auth login`）的 session 幾週就會過期，排程會開始失敗並在 `organize.log` 留「登入失效」警告。
+長期做法：執行 `claude setup-token`，把印出的一年期 token 存成 `data\.oauth_token`（單行、不進版控），
+排程會優先用它。也可以隨時在 Claude Code 裡手動說「整理 inbox」。
 
 ## 美食網站
 `python build_site.py` 會把 `data/trucks.csv` 做成單頁網站 `docs/index.html`，有搜尋與類別篩選。

@@ -12,6 +12,13 @@ $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 $manifests = Get-ChildItem (Join-Path $Root "inbox") -Filter "*_manifest.json" -ErrorAction SilentlyContinue
 if (-not $manifests) { Add-Content $log "$stamp inbox 沒有新截圖，略過"; exit 0 }
 
+# 登入：瀏覽器登入的 OAuth session 幾週就會過期（2026-10 曾因此連續失敗一週）。
+# 若 data\.oauth_token 存在（由 `claude setup-token` 產生的一年期 token，已在 .gitignore），就用它。
+$tokenFile = Join-Path $Root "data\.oauth_token"
+if (Test-Path $tokenFile) {
+    $env:CLAUDE_CODE_OAUTH_TOKEN = (Get-Content $tokenFile -Raw).Trim()
+}
+
 # PowerShell 不能把 claude.cmd 接在管線裡，直接呼叫套件內的 claude.exe
 $cli = Join-Path $env:APPDATA "npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe"
 if (-not (Test-Path $cli)) { Add-Content $log "$stamp 找不到 Claude Code CLI：$cli（請 npm install -g @anthropic-ai/claude-code）"; exit 1 }
@@ -29,10 +36,13 @@ $rowsBefore = CsvRows $csv
 
 Add-Content $log "$stamp 開始整理（$($manifests.Count) 次抓取，資料表 $rowsBefore 列）"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$out = & $cli -p $prompt --allowedTools $allowed --permission-prompts none --max-turns 120 --output-format json 2>&1 | Out-String
+$out = & $cli -p $prompt --allowedTools $allowed --permission-prompts none --max-turns 200 --output-format json 2>&1 | Out-String
 try {
     $j = $out | ConvertFrom-Json
     Add-Content $log ("{0} 結束 is_error={1} turns={2} cost_usd={3}`n{4}`n" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $j.is_error, $j.num_turns, $j.total_cost_usd, $j.result)
+    if ("$($j.result)" -match "authenticate|expired|Not logged in") {
+        Add-Content $log "!!! 登入失效：請在終端機執行 claude setup-token，把印出的 token 存成 data\.oauth_token（或執行 claude auth login）。在修好之前 inbox 會一直累積。`n"
+    }
 } catch {
     Add-Content $log ("{0} 無法解析輸出：`n{1}`n" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $out)
 }
