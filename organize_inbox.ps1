@@ -16,7 +16,8 @@ if (-not $manifests) { Add-Content $log "$stamp inbox 沒有新截圖，略過";
 # 若 data\.oauth_token 存在（由 `claude setup-token` 產生的一年期 token，已在 .gitignore），就用它。
 $tokenFile = Join-Path $Root "data\.oauth_token"
 if (Test-Path $tokenFile) {
-    $env:CLAUDE_CODE_OAUTH_TOKEN = (Get-Content $tokenFile -Raw).Trim()
+    # 去掉所有空白與換行：從終端機複製長 token 時常被折行插入空白
+    $env:CLAUDE_CODE_OAUTH_TOKEN = ((Get-Content $tokenFile -Raw) -replace '\s', '')
 }
 
 # PowerShell 不能把 claude.cmd 接在管線裡，直接呼叫套件內的 claude.exe
