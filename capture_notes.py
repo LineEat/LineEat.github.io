@@ -2,7 +2,7 @@
 capture_notes.py — 自動把 LINE 社群「記事本」逐頁截圖存到 inbox/
 
 原理：LINE 電腦版是 Qt 程式，記事本沒有 API、本機資料庫與圖片快取都加密，所以用桌面自動化：
-  1. 找到社群的聊天視窗（該聊天室要以獨立視窗開著，可被其他視窗蓋住，不可最小化）
+  1. 找到社群的聊天視窗；若不在（例如 LINE 重開過），就在 LINE 主視窗的聊天列表搜尋社群名稱並雙擊開成獨立視窗
   2. 借用前景權限（AttachThreadInput）把聊天視窗提到前面，點右上角「記事本」圖示，
      立刻把前景還給原本的程式 → LINE 視窗會閃一下約半秒
   3. 記事本視窗（SquarePostListWindow）調成 428x1000（LINE 允許的最大寬度）、壓到 z-order 最底層
@@ -21,6 +21,7 @@ from PIL import Image
 from pywinauto import Desktop, mouse
 
 COMMUNITY = "餐車市集"          # 聊天視窗標題包含的關鍵字
+COMMUNITY_SEARCH = "南軟二期餐車市集"   # 聊天視窗不在時，用這個字串在 LINE 主視窗搜尋並開啟
 ROOT = os.path.dirname(os.path.abspath(__file__))
 INBOX = os.path.join(ROOT, "inbox")
 LOGFILE = os.path.join(ROOT, "capture.log")
@@ -181,6 +182,53 @@ def expand_show_more(H):
     log(f"展開了 {clicks} 個「顯示更多」")
     return clicks
 
+def open_chat_from_main():
+    """聊天視窗不在時（例如 LINE 重開過）：在 LINE 主視窗的聊天列表搜尋社群名稱，
+    雙擊「聊天」區第一筆結果，把它開成獨立視窗。搜尋欄用 UIA 直接設值，不模擬鍵盤、不按 Enter，
+    所以不可能把文字打進任何聊天室。開錯視窗會立刻關掉。回傳聊天視窗 wrapper 或 None。"""
+    main = find_window("AllInOneWindow")
+    if not main:
+        log("LINE 主視窗不在畫面上（可能縮在系統匣或沒開 LINE），無法自動開啟聊天室"); return None
+    if user32.IsIconic(main.handle):
+        user32.ShowWindow(main.handle, 4); time.sleep(1)       # SW_SHOWNOACTIVATE
+    panels = main.descendants(class_name="MainChatPanel")
+    if not panels:
+        log("LINE 主視窗目前不在「聊天」分頁，無法自動開啟聊天室"); return None
+    panel = panels[0]
+    edit = panel.descendants(class_name="LcTextField")[0]
+    try:
+        edit.iface_value.SetValue(COMMUNITY_SEARCH); time.sleep(1.5)
+        items = sorted(panel.descendants(class_name="LcListView")[0].children(), key=lambda i: i.rectangle().top)
+        rows = [i for i in items if i.rectangle().height() >= 60]   # 區段標題約 34px，聊天列約 71px
+        if not rows:
+            log(f"搜尋「{COMMUNITY_SEARCH}」沒有結果"); return None
+        r = rows[0].rectangle(); cx, cy = (r.left + r.right) // 2, (r.top + r.bottom) // 2
+        before = set(line_toplevels())
+        cur = wintypes.POINT(); user32.GetCursorPos(ctypes.byref(cur))
+        prev = user32.GetForegroundWindow()
+        try:
+            for attempt in range(3):                                 # 系統偶爾會擋一次前景切換，重試
+                activate(main.handle)
+                if owner_of_point(cx, cy) == main.handle: break
+                time.sleep(0.8)
+            else:
+                log("聊天列表被其他視窗蓋住，無法點擊"); return None
+            mouse.double_click(coords=(cx, cy))
+        finally:
+            user32.SetCursorPos(cur.x, cur.y)
+            if prev and prev != main.handle: activate(prev)
+        for _ in range(10):
+            time.sleep(0.5)
+            chat = find_window("ChatWindow", COMMUNITY)
+            if chat:
+                log("已從主視窗自動開啟聊天室：" + chat.window_text()); return chat
+        for h in set(line_toplevels()) - before:                     # 開錯了就關掉
+            user32.PostMessageW(h, WM_CLOSE, 0, 0)
+        log("雙擊後沒有出現餐車市集的聊天視窗"); return None
+    finally:
+        try: edit.iface_value.SetValue("")                           # 清空搜尋欄，恢復原狀
+        except Exception: pass
+
 def open_notes(chat):
     """點聊天視窗右上角的記事本圖示，回傳記事本視窗 wrapper。"""
     cr = chat.rectangle()
@@ -191,10 +239,14 @@ def open_notes(chat):
         log("找不到記事本按鈕（標題列右側按鈕數 < 2）"); return None
     btn = btns[-2]                      # 由左到右：搜尋、聊天、記事本、選單 → 倒數第二顆
     cur = wintypes.POINT(); user32.GetCursorPos(ctypes.byref(cur))
-    prev = activate(chat.handle)
+    prev = user32.GetForegroundWindow()
     try:
         br = btn.rectangle(); cx, cy = (br.left + br.right) // 2, (br.top + br.bottom) // 2
-        if owner_of_point(cx, cy) != chat.handle:
+        for attempt in range(3):                                     # 系統偶爾會擋一次前景切換，重試
+            activate(chat.handle)
+            if owner_of_point(cx, cy) == chat.handle: break
+            time.sleep(0.8)
+        else:
             log("聊天視窗提到前景後按鈕仍被蓋住，放棄點擊"); return None
         btn.click_input(); time.sleep(0.3)
     finally:
@@ -210,9 +262,9 @@ def open_notes(chat):
 def main():
     keep = "--keep" in sys.argv
     os.makedirs(INBOX, exist_ok=True)
-    chat = find_window("ChatWindow", COMMUNITY)
+    chat = find_window("ChatWindow", COMMUNITY) or open_chat_from_main()
     if not chat:
-        log(f"找不到標題含「{COMMUNITY}」的聊天視窗。請在 LINE 把該社群以獨立視窗開著（可被蓋住，不要最小化）。"); return 2
+        log(f"找不到標題含「{COMMUNITY}」的聊天視窗，也無法從主視窗自動開啟。請確認 LINE 已登入且主視窗開著。"); return 2
     if user32.IsIconic(chat.handle):
         user32.ShowWindow(chat.handle, 4)   # SW_SHOWNOACTIVATE
         time.sleep(1)
